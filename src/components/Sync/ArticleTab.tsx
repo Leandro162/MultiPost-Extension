@@ -28,6 +28,8 @@ import type { PlatformInfo } from "~sync/common";
 import { EXTRA_CONFIG_STORAGE_KEY } from "~sync/extraconfig";
 import PlatformCheckbox from "./PlatformCheckbox";
 
+const TARGET_ARTICLE_PLATFORMS = ["ARTICLE_ZHIHU", "ARTICLE_WEIBO", "ARTICLE_CSDN"];
+
 interface ArticleTabProps {
   funcPublish: (data: SyncData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,7 +85,10 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     const loadPlatformInfos = async () => {
       try {
         const infos = await getPlatformInfos("ARTICLE");
-        setPlatforms(infos);
+        const targetInfos = TARGET_ARTICLE_PLATFORMS.map((name) => infos.find((info) => info.name === name)).filter(
+          (info): info is PlatformInfo => Boolean(info),
+        );
+        setPlatforms(targetInfos);
       } catch (error) {
         console.error("加载平台信息失败:", error);
       }
@@ -92,7 +97,20 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     loadPlatformInfos();
   }, [accountInfos, extraConfigMap]);
 
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      const savedPlatforms = await storage.get<string[]>("articlePlatforms");
+      const validSavedPlatforms = Array.isArray(savedPlatforms)
+        ? savedPlatforms.filter((platform) => TARGET_ARTICLE_PLATFORMS.includes(platform))
+        : [];
+      setSelectedPlatforms(validSavedPlatforms.length > 0 ? validSavedPlatforms : TARGET_ARTICLE_PLATFORMS);
+    };
+
+    loadPlatforms();
+  }, []);
+
   const handlePlatformChange = async (platform: string, isSelected: boolean) => {
+    if (!TARGET_ARTICLE_PLATFORMS.includes(platform)) return;
     const newSelectedPlatforms = isSelected
       ? [...selectedPlatforms, platform]
       : selectedPlatforms.filter((p) => p !== platform);
@@ -104,12 +122,6 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     setSelectedPlatforms([]);
     await storage.set("articlePlatforms", []);
   };
-
-  const loadPlatforms = async () => {
-    const platforms = await storage.get<string[]>("articlePlatforms");
-    setSelectedPlatforms((platforms as string[]) || []);
-  };
-  loadPlatforms();
 
   const handleCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -484,35 +496,6 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
                   <div className="grid grid-cols-2 gap-2">
                     {platforms
                       .filter((platform) => platform.tags?.includes("CN"))
-                      .map((platform) => (
-                        <PlatformCheckbox
-                          key={platform.name}
-                          platformInfo={platform}
-                          isSelected={selectedPlatforms.includes(platform.name)}
-                          onChange={(_, isSelected) => handlePlatformChange(platform.name, isSelected)}
-                          isDisabled={false}
-                        />
-                      ))}
-                  </div>
-                </AccordionItem>
-                <AccordionItem
-                  key="International"
-                  title={chrome.i18n.getMessage("optionsInternationalPlatforms")}
-                  subtitle={`${
-                    selectedPlatforms.filter((platform) => {
-                      const info = platforms.find((p) => p.name === platform);
-                      return info?.tags?.includes("International");
-                    }).length
-                  }/${platforms.filter((platform) => platform.tags?.includes("International")).length}`}
-                  startContent={
-                    <div className="w-8">
-                      <Icon icon="openmoji:globe-with-meridians" className="w-full h-max" />
-                    </div>
-                  }
-                  className="py-1">
-                  <div className="grid grid-cols-2 gap-2">
-                    {platforms
-                      .filter((platform) => platform.tags?.includes("International"))
                       .map((platform) => (
                         <PlatformCheckbox
                           key={platform.name}

@@ -302,32 +302,33 @@ export async function ArticleWeibo(data: SyncData) {
 
         // 处理封面图片
         updateTip("正在上传封面...");
+        let coverUrl: string | null = null;
         if (articleData.cover) {
           const croppedCover = await cropImage(articleData.cover, 16 / 9);
-          const coverUrl = await uploadImage(croppedCover);
+          coverUrl = await uploadImage(croppedCover);
 
           if (!coverUrl) {
             console.debug("封面上传失败");
           }
-
-          // 创建并保存草稿
-          const draftId = await createAndSaveDraft(articleData, coverUrl, updateTip);
-
-          if (draftId) {
-            updateTip("草稿发布成功，请预览...");
-
-            if (!data.isAutoPublish) {
-              const draftUrl = "https://card.weibo.com/article/v3/editor";
-              console.debug("draftUrl", draftUrl);
-              window.location.href = draftUrl;
-            }
-            return true;
-          }
-          updateTip("尝试 DOM 发布...");
-          // 这里可以添加DOM发布的逻辑
-          updateTip("请继续操作...");
-          return false;
         }
+
+        // 创建并保存草稿
+        const draftId = await createAndSaveDraft(articleData, coverUrl, updateTip);
+
+        if (draftId) {
+          updateTip("草稿发布成功，请预览...");
+
+          if (!data.isAutoPublish) {
+            const draftUrl = "https://card.weibo.com/article/v3/editor";
+            console.debug("draftUrl", draftUrl);
+            window.location.href = draftUrl;
+          }
+          return true;
+        }
+        updateTip("尝试 DOM 发布...");
+        // 这里可以添加DOM发布的逻辑
+        updateTip("请继续操作...");
+        return false;
       } catch (error) {
         console.error("发布文章失败:", error);
         return false;

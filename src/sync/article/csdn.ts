@@ -171,7 +171,7 @@ export async function ArticleCSDN(data: SyncData) {
   async function publishArticle(articleData: ArticleData): Promise<string | null> {
     console.log("开始发布文章:", articleData.title);
 
-    articleData.htmlContent = await processContent(articleData.htmlContent, articleData.images);
+    articleData.htmlContent = await processContent(articleData.htmlContent, articleData.images || []);
 
     let coverUrl = "";
     if (articleData.cover) {
@@ -209,7 +209,7 @@ export async function ArticleCSDN(data: SyncData) {
       tags: tagsValue,
       categories: categoryValue,
       type: articleType,
-      status: 2,
+      status: 0,
       read_type: "public",
       reason: "",
       resource_url: "",
