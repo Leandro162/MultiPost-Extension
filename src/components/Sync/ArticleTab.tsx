@@ -36,6 +36,7 @@ interface ArticleTabProps {
 const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => {
   const [title, setTitle] = useState<string>("");
   const [digest, setDigest] = useState<string>("");
+  const [articleContent, setArticleContent] = useState<string>("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [url, setUrl] = useState<string>("");
   const [importedContent, setImportedContent] = useState<{
@@ -148,9 +149,8 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     }
     // 将 HTML 转换为 Markdown
     // const markdownContent = turndownService.turndown(content || digest || '');
-    const markdownOriginContent = importedContent?.originContent
-      ? turndownService.turndown(importedContent.originContent)
-      : "";
+    const htmlContent = articleContent || digest || "";
+    const markdownOriginContent = htmlContent ? turndownService.turndown(htmlContent) : "";
 
     const data: SyncData = {
       platforms: selectedPlatforms.map((platform) => ({
@@ -164,7 +164,7 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
         cover: coverImage || null,
         images: images || [],
         markdownContent: markdownOriginContent,
-        htmlContent: importedContent?.originContent || digest || "",
+        htmlContent,
       },
       isAutoPublish: false,
     };
@@ -189,12 +189,10 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     const parser = new DOMParser();
     const doc = parser.parseFromString(content, "text/html");
     const images = Array.from(doc.querySelectorAll("img"));
-    const videos = Array.from(doc.querySelectorAll("video"));
     const files = Array.from(doc.querySelectorAll('a[href$=".pdf"], a[href$=".doc"], a[href$=".docx"]'));
 
     const fileDatas: FileData[] = [];
     const imageFileDatas: FileData[] = [];
-    const videoFileDatas: FileData[] = [];
 
     // 处理图片
     for (let i = 0; i < images.length; i++) {
@@ -222,29 +220,6 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
         setProcessProgress((i / images.length) * 100);
       } catch (error) {
         console.error(chrome.i18n.getMessage("errorProcessingImages") || "处理图片时出错:", error);
-      }
-    }
-
-    // 处理视频
-    setProcessStatus(chrome.i18n.getMessage("processingVideos"));
-    for (let i = 0; i < videos.length; i++) {
-      try {
-        const video = videos[i];
-        const src = video.src;
-        const response = await fetch(src);
-        const blob = await response.blob();
-        const fileData: FileData = {
-          name: `video_${i}.${blob.type.split("/")[1]}`,
-          type: blob.type,
-          size: blob.size,
-          url: URL.createObjectURL(blob),
-        };
-        videoFileDatas.push(fileData);
-
-        // 替换原始视频的 src 为本地 URL
-        video.src = fileData.url;
-      } catch (error) {
-        console.error(chrome.i18n.getMessage("errorProcessingVideos") || "处理视频时出错:", error);
       }
     }
 
@@ -278,7 +253,6 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     // 返回处理后的 HTML 内容和文件数据
     return {
       imageFileDatas,
-      videoFileDatas,
       fileDatas,
       processedContent: doc.body.innerHTML,
     };
@@ -324,6 +298,7 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
 
         setTitle(res.title);
         setDigest(res.digest || "");
+        setArticleContent(processedContent);
         setImages(imageFileDatas);
       }
     } catch (error) {
@@ -439,7 +414,13 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
               <CardBody>
                 <h4 className="mb-2 font-semibold">{importedContent.title}</h4>
                 <p className="mb-4 text-sm">{importedContent.digest}</p>
-                <div className="max-w-none prose" dangerouslySetInnerHTML={{ __html: importedContent.content }} />
+                <div
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="max-w-none prose min-h-48 rounded-lg border border-default-200 bg-white p-3 outline-none focus:border-primary"
+                  onInput={(event) => setArticleContent(event.currentTarget.innerHTML)}
+                  dangerouslySetInnerHTML={{ __html: articleContent || importedContent.content }}
+                />
               </CardBody>
             </Card>
           )}

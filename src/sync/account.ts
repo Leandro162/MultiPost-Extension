@@ -1,21 +1,5 @@
 import { Storage } from "@plasmohq/storage";
 import { ping } from "~background/services/api";
-import { getAlipayAccountInfo } from "./account/alipay";
-import { getBilibiliAccountInfo } from "./account/bilibili";
-import { getChejiahaoAccountInfo } from "./account/chejiahao";
-import { getDayuAccountInfo } from "./account/dayu";
-import { getDewuAccountInfo } from "./account/dewu";
-import { getDouyinAccountInfo } from "./account/douyin";
-import { getNeteaseAccountInfo } from "./account/netease";
-import { getPinduoduoAccountInfo } from "./account/pinduoduo";
-import { getQiEAccountInfo } from "./account/qie";
-import { getRednoteAccountInfo } from "./account/rednote";
-import { getSohuAccountInfo } from "./account/sohu";
-import { getTiktokAccountInfo } from "./account/tiktok";
-import { getVivoVideoAccountInfo } from "./account/vivovideo";
-import { getXAccountInfo } from "./account/x";
-import { getYicheAccountInfo } from "./account/yiche";
-import { getYidianAccountInfo } from "./account/yidian";
 import { type AccountInfo, type PlatformInfo, getPlatformInfos } from "./common";
 
 // 存储账号信息的键名
@@ -35,120 +19,7 @@ export const refreshAccountInfoMap: Record<
     faviconUrl: string;
     getAccountInfo: () => Promise<AccountInfo>;
   }
-> = {
-  x: {
-    platformName: chrome.i18n.getMessage("platformX"),
-    accountKey: "x",
-    homeUrl: "https://x.com",
-    faviconUrl: "https://x.com/favicon.ico",
-    getAccountInfo: getXAccountInfo,
-  },
-  tiktok: {
-    platformName: chrome.i18n.getMessage("platformTiktok"),
-    accountKey: "tiktok",
-    homeUrl: "https://www.tiktok.com",
-    faviconUrl: "https://pic1.zhimg.com/80/v2-9ad49e8e52b473e4c366b69bc9653a45_1440w.png",
-    getAccountInfo: getTiktokAccountInfo,
-  },
-  douyin: {
-    platformName: chrome.i18n.getMessage("platformDouyin"),
-    accountKey: "douyin",
-    homeUrl: "https://creator.douyin.com",
-    faviconUrl: "https://lf1-cdn-tos.bytegoofy.com/goofy/ies/douyin_web/public/favicon.ico",
-    getAccountInfo: getDouyinAccountInfo,
-  },
-  rednote: {
-    platformName: chrome.i18n.getMessage("platformRednote"),
-    accountKey: "rednote",
-    homeUrl: "https://creator.xiaohongshu.com",
-    faviconUrl: "https://fe-video-qc.xhscdn.com/fe-platform/ed8fe781ce9e16c1bfac2cd962f0721edabe2e49.ico",
-    getAccountInfo: getRednoteAccountInfo,
-  },
-  bilibili: {
-    platformName: chrome.i18n.getMessage("platformBilibili"),
-    accountKey: "bilibili",
-    homeUrl: "https://t.bilibili.com",
-    faviconUrl: "https://static.hdslb.com/images/favicon.ico",
-    getAccountInfo: getBilibiliAccountInfo,
-  },
-  qie: {
-    platformName: chrome.i18n.getMessage("platformQiE"),
-    accountKey: "qie",
-    homeUrl: "https://om.qq.com",
-    faviconUrl: "https://om.qq.com/favicon.ico",
-    getAccountInfo: getQiEAccountInfo,
-  },
-  chejiahao: {
-    platformName: chrome.i18n.getMessage("platformChejiahao"),
-    accountKey: "chejiahao",
-    homeUrl: "https://creator.autohome.com.cn",
-    faviconUrl: "https://autohome.com.cn/favicon.ico",
-    getAccountInfo: getChejiahaoAccountInfo,
-  },
-  dewu: {
-    platformName: chrome.i18n.getMessage("platformDewu"),
-    accountKey: "dewu",
-    homeUrl: "https://creator.dewu.com",
-    faviconUrl: "https://img.dewu.com/favicon.ico",
-    getAccountInfo: getDewuAccountInfo,
-  },
-  yiche: {
-    platformName: chrome.i18n.getMessage("platformYiche"),
-    accountKey: "yiche",
-    homeUrl: "https://mp.yiche.com/",
-    faviconUrl: "https://www.yiche.com/favicon.ico",
-    getAccountInfo: getYicheAccountInfo,
-  },
-  sohu: {
-    platformName: chrome.i18n.getMessage("platformSohu"),
-    accountKey: "sohu",
-    homeUrl: "https://mp.sohu.com",
-    faviconUrl: "https://www.sohu.com/favicon.ico",
-    getAccountInfo: getSohuAccountInfo,
-  },
-  netease: {
-    platformName: chrome.i18n.getMessage("platformNetease"),
-    accountKey: "netease",
-    homeUrl: "https://dy.163.com",
-    faviconUrl: "https://www.163.com/favicon.ico",
-    getAccountInfo: getNeteaseAccountInfo,
-  },
-  dayu: {
-    platformName: chrome.i18n.getMessage("platformDayu"),
-    accountKey: "dayu",
-    homeUrl: "https://mp.dayu.com",
-    faviconUrl: "https://www.dayu.com/favicon.ico",
-    getAccountInfo: getDayuAccountInfo,
-  },
-  alipay: {
-    platformName: chrome.i18n.getMessage("platformAlipay"),
-    accountKey: "alipay",
-    homeUrl: "https://b.alipay.com",
-    faviconUrl: "https://www.alipay.com/favicon.ico",
-    getAccountInfo: getAlipayAccountInfo,
-  },
-  yidian: {
-    platformName: chrome.i18n.getMessage("platformYidian"),
-    accountKey: "yidian",
-    homeUrl: "https://yidian.com",
-    faviconUrl: "https://www.yidian.com/favicon.ico",
-    getAccountInfo: getYidianAccountInfo,
-  },
-  pinduoduo: {
-    platformName: chrome.i18n.getMessage("platformPinduoduo"),
-    accountKey: "pinduoduo",
-    homeUrl: "https://pinduoduo.com",
-    faviconUrl: "https://www.pinduoduo.com/favicon.ico",
-    getAccountInfo: getPinduoduoAccountInfo,
-  },
-  vivovideo: {
-    platformName: chrome.i18n.getMessage("platformVivoVideo"),
-    accountKey: "vivovideo",
-    homeUrl: "https://video.vivo.com.cn",
-    faviconUrl: "https://www.vivo.com.cn/favicon.ico",
-    getAccountInfo: getVivoVideoAccountInfo,
-  },
-};
+> = {};
 
 /**
  * 获取指定平台账号的最新信息
@@ -162,7 +33,12 @@ export async function refreshAccountInfo(accountKey: string): Promise<AccountInf
     throw new Error(`找不到账号信息: ${accountKey}`);
   }
 
-  const accountInfo = await refreshAccountInfoMap[accountKey].getAccountInfo();
+  const refresher = refreshAccountInfoMap[accountKey];
+  if (!refresher) {
+    throw new Error(`暂不支持自动刷新账号信息: ${accountKey}`);
+  }
+
+  const accountInfo = await refresher.getAccountInfo();
 
   if (!accountInfo) {
     console.error(`获取账号信息失败: ${accountKey}`);

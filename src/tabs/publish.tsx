@@ -7,12 +7,9 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   type ArticleData,
-  type DynamicData,
   type FileData,
-  type PodcastData,
   type SyncData,
   type SyncDataPlatform,
-  type VideoData,
   injectScriptsToTabs,
 } from "~sync/common";
 
@@ -46,11 +43,7 @@ const focusMainWindow = async () => {
 };
 
 const getTitleFromData = (data: SyncData) => {
-  const { data: contentData } = data;
-  if ("content" in contentData) {
-    return contentData.title || contentData.content;
-  }
-  return contentData.title;
+  return data.data.title;
 };
 
 export default function Publish() {
@@ -164,93 +157,6 @@ export default function Publish() {
       setErrors((prev) => [...prev, chrome.i18n.getMessage("errorProcessFile", [file.name])]);
       return file;
     }
-  };
-
-  const processDynamic = async (data: SyncData) => {
-    setNotice(chrome.i18n.getMessage("processingContent"));
-    const { images = [], videos = [] } = data.data as DynamicData;
-
-    const processedImages: FileData[] = [];
-    const processedVideos: FileData[] = [];
-
-    // 确保 images 是可迭代的数组
-    if (Array.isArray(images) && images.length > 0) {
-      for (const image of images) {
-        setNotice(chrome.i18n.getMessage("errorProcessImage", [image.name]));
-        processedImages.push(await processFile(image));
-      }
-    } else {
-      console.warn("images 不是一个数组或可迭代对象", images);
-    }
-
-    // 确保 videos 是可迭代的数组
-    if (Array.isArray(videos) && videos.length > 0) {
-      for (const video of videos) {
-        setNotice(chrome.i18n.getMessage("errorProcessFile", [video.name]));
-        processedVideos.push(await processFile(video));
-      }
-    } else {
-      console.warn("videos 不是一个数组或可迭代对象", videos);
-    }
-
-    return {
-      ...data,
-      data: {
-        ...data.data,
-        images: processedImages,
-        videos: processedVideos,
-      },
-    };
-  };
-
-  const processPodcast = async (data: SyncData) => {
-    setNotice(chrome.i18n.getMessage("processingContent"));
-    const { audio } = data.data as PodcastData;
-
-    if (!audio) {
-      console.warn("音频数据不存在");
-      return data;
-    }
-
-    const processedAudio = await processFile(audio);
-    return {
-      ...data,
-      data: {
-        ...data.data,
-        audio: processedAudio,
-      },
-    };
-  };
-
-  const processVideo = async (data: SyncData) => {
-    setNotice(chrome.i18n.getMessage("processingContent"));
-    const { video, cover, verticalCover, scheduledPublishTime } = data.data as VideoData;
-
-    if (!video) {
-      console.warn("视频数据不存在");
-      return data;
-    }
-
-    const processedVideo = await processFile(video);
-    let processedCover: FileData | null = null;
-    if (cover) {
-      processedCover = await processFile(cover);
-    }
-    let processedVerticalCover: FileData | null = null;
-    if (verticalCover) {
-      processedVerticalCover = await processFile(verticalCover);
-    }
-
-    return {
-      ...data,
-      data: {
-        ...data.data,
-        video: processedVideo,
-        cover: processedCover || cover,
-        verticalCover: processedVerticalCover || verticalCover,
-        scheduledPublishTime: scheduledPublishTime || 0,
-      },
-    };
   };
 
   const handleReloadTab = async (tabId: number) => {
@@ -527,21 +433,7 @@ export default function Publish() {
       processedData.origin = data.data;
 
       try {
-        if (data?.platforms.some((platform) => platform.name.includes("ARTICLE"))) {
-          processedData = await processArticle(data);
-        }
-
-        if (data?.platforms.some((platform) => platform.name.includes("DYNAMIC"))) {
-          processedData = await processDynamic(data);
-        }
-
-        if (data?.platforms.some((platform) => platform.name.includes("VIDEO"))) {
-          processedData = await processVideo(data);
-        }
-
-        if (data?.platforms.some((platform) => platform.name.includes("PODCAST"))) {
-          processedData = await processPodcast(data);
-        }
+        processedData = await processArticle(data);
 
         setData(processedData);
         setNotice(chrome.i18n.getMessage("processingComplete"));
