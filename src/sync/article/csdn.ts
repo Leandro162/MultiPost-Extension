@@ -60,14 +60,15 @@ export async function ArticleCSDN(data: SyncData) {
   }
 
   // 获取图片上传配置
-  async function getUploadConfig(): Promise<UploadConfig> {
+  async function getUploadConfig(fileInfo: FileData): Promise<UploadConfig> {
+    const suffix = fileInfo.type?.split("/")[1] || fileInfo.name.split(".").pop() || "png";
     const params = new URLSearchParams({
       type: "blog",
       rtype: "blog_picture",
       "x-image-template": "standard",
       "x-image-app": "direct_blog",
       "x-image-dir": "direct",
-      "x-image-suffix": "png",
+      "x-image-suffix": suffix,
     });
 
     const url = `https://imgservice.csdn.net/direct/v1.0/image/obs/upload?${params.toString()}`;
@@ -79,13 +80,42 @@ export async function ArticleCSDN(data: SyncData) {
     return result.data;
   }
 
+  function getImageUrlFromUploadResult(result: unknown, config: UploadConfig): string | null {
+    const data = result as {
+      data?: { imageUrl?: string; image_url?: string; url?: string; location?: string };
+      imageUrl?: string;
+      image_url?: string;
+      url?: string;
+      location?: string;
+    };
+    const imageUrl =
+      data?.data?.imageUrl ||
+      data?.data?.image_url ||
+      data?.data?.url ||
+      data?.data?.location ||
+      data?.imageUrl ||
+      data?.image_url ||
+      data?.url ||
+      data?.location;
+
+    if (typeof imageUrl === "string" && imageUrl.startsWith("http")) {
+      return imageUrl;
+    }
+
+    if (config.filePath) {
+      return `https://i-blog.csdnimg.cn/${config.filePath.replace(/^\/+/, "")}`;
+    }
+
+    return null;
+  }
+
   // 上传单个图片
   async function uploadSingleImage(fileInfo: FileData, retryCount = 3): Promise<string | null> {
     console.log(`开始上传图片: ${fileInfo.name}`);
 
     for (let i = 0; i < retryCount; i++) {
       try {
-        const config = await getUploadConfig();
+        const config = await getUploadConfig(fileInfo);
         const response = await fetch(fileInfo.url);
         if (!response.ok) {
           throw new Error(`获取图片失败: ${response.status}`);
@@ -123,12 +153,20 @@ export async function ArticleCSDN(data: SyncData) {
           throw new Error(`上传失败: ${uploadResponse.status}`);
         }
 
-        const result = await uploadResponse.json();
-        if (result?.data?.imageUrl) {
-          console.log(`图片上传成功: ${result.data.imageUrl}`);
-          return result.data.imageUrl;
+        const responseText = await uploadResponse.text();
+        let result: unknown = null;
+        try {
+          result = responseText ? JSON.parse(responseText) : null;
+        } catch (error) {
+          console.debug("CSDN 图片上传返回非 JSON，使用 filePath 兜底:", responseText, error);
         }
-        throw new Error("上传返回数据格式错误");
+
+        const imageUrl = getImageUrlFromUploadResult(result, config);
+        if (imageUrl) {
+          console.log(`图片上传成功: ${imageUrl}`);
+          return imageUrl;
+        }
+        throw new Error(`上传返回数据格式错误: ${responseText}`);
       } catch (error) {
         console.error(`第 ${i + 1} 次上传失败:`, error);
         if (i === retryCount - 1) {
@@ -148,11 +186,11 @@ export async function ArticleCSDN(data: SyncData) {
 
     console.log(`处理文章图片，共 ${images.length} 张`);
 
-    const uploadPromises = images.map(async (img) => {
+    const uploadPromises = images.map(async (img, index) => {
       const src = img.getAttribute("src");
       if (!src) return;
 
-      const fileInfo = imageDatas.find((f) => f.url === src);
+      const fileInfo = imageDatas.find((f) => f.url === src) || imageDatas[index];
       if (!fileInfo) return;
 
       const newUrl = await uploadSingleImage(fileInfo);

@@ -49,6 +49,7 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
   } | null>(null);
   const [coverImage, setCoverImage] = useState<FileData | null>(null);
   const [images, setImages] = useState<FileData[]>([]);
+  const editorRef = useRef<HTMLDivElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState("");
@@ -107,6 +108,12 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     loadPlatforms();
   }, []);
 
+  useEffect(() => {
+    if (editorRef.current && importedContent) {
+      editorRef.current.innerHTML = articleContent || importedContent.content;
+    }
+  }, [importedContent]);
+
   const handlePlatformChange = async (platform: string, isSelected: boolean) => {
     if (!TARGET_ARTICLE_PLATFORMS.includes(platform)) return;
     const newSelectedPlatforms = isSelected
@@ -149,7 +156,7 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     }
     // 将 HTML 转换为 Markdown
     // const markdownContent = turndownService.turndown(content || digest || '');
-    const htmlContent = articleContent || digest || "";
+    const htmlContent = editorRef.current?.innerHTML || articleContent || digest || "";
     const markdownOriginContent = htmlContent ? turndownService.turndown(htmlContent) : "";
 
     const data: SyncData = {
@@ -181,13 +188,54 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
     }
   };
 
+  const sanitizeEditableContent = (content: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+
+    doc.querySelectorAll("script, style, iframe").forEach((element) => element.remove());
+    doc.body.querySelectorAll<HTMLElement>("*").forEach((element) => {
+      element.removeAttribute("contenteditable");
+      element.removeAttribute("draggable");
+      element.removeAttribute("spellcheck");
+
+      for (const attr of Array.from(element.attributes)) {
+        if (attr.name.startsWith("on")) {
+          element.removeAttribute(attr.name);
+        }
+      }
+
+      const style = element.getAttribute("style");
+      if (style) {
+        const editableStyle = style
+          .split(";")
+          .map((rule) => rule.trim())
+          .filter(
+            (rule) =>
+              rule &&
+              !rule.startsWith("pointer-events") &&
+              !rule.startsWith("user-select") &&
+              !rule.startsWith("-webkit-user-select"),
+          )
+          .join("; ");
+
+        if (editableStyle) {
+          element.setAttribute("style", editableStyle);
+        } else {
+          element.removeAttribute("style");
+        }
+      }
+    });
+
+    return doc.body.innerHTML;
+  };
+
   const processImportedContent = async (content: string) => {
     setIsProcessing(true);
     setProcessStatus(chrome.i18n.getMessage("processingImages"));
     setProcessProgress(0);
 
     const parser = new DOMParser();
-    const doc = parser.parseFromString(content, "text/html");
+    const doc = parser.parseFromString(sanitizeEditableContent(content), "text/html");
     const images = Array.from(doc.querySelectorAll("img"));
     const files = Array.from(doc.querySelectorAll('a[href$=".pdf"], a[href$=".doc"], a[href$=".docx"]'));
 
@@ -415,11 +463,15 @@ const ArticleTab: React.FC<ArticleTabProps> = ({ funcPublish, funcScraper }) => 
                 <h4 className="mb-2 font-semibold">{importedContent.title}</h4>
                 <p className="mb-4 text-sm">{importedContent.digest}</p>
                 <div
+                  ref={editorRef}
                   contentEditable
                   suppressContentEditableWarning
-                  className="max-w-none prose min-h-48 rounded-lg border border-default-200 bg-white p-3 outline-none focus:border-primary"
+                  role="textbox"
+                  aria-multiline="true"
+                  tabIndex={0}
+                  className="max-w-none prose min-h-48 cursor-text select-text rounded-lg border border-default-200 bg-white p-3 outline-none focus:border-primary [&_*]:select-text"
+                  onBlur={(event) => setArticleContent(event.currentTarget.innerHTML)}
                   onInput={(event) => setArticleContent(event.currentTarget.innerHTML)}
-                  dangerouslySetInnerHTML={{ __html: articleContent || importedContent.content }}
                 />
               </CardBody>
             </Card>
